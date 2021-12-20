@@ -1,10 +1,10 @@
-#Mozgus
+# Mozgus
 
 This program is a Discord bot for helping play the game of Call of Cthulhu.
 The name comes from a character in the manga *Berserk.* Mozgus is all about
 upholding the rules, and so is this bot.
 
-#Configuration
+# Configuration
 
 The program does not come with the `config` file, but after being run the
 first time, it will panic and generate one. To edit or create said file,
@@ -17,7 +17,7 @@ their odds of success by about five percent. The default is `false`, but
 you may change this to `true` to increase the rolls' odds of success by
 five percent.
 
-#Commands
+# Commands
 
 Mozgus is very much a work in progress. Planned features include NLP
 to make rolls happen much more easily, but for now we are just using

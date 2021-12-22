@@ -23,4 +23,6 @@ Mozgus is very much a work in progress. Planned features include NLP
 to make rolls happen much more easily, but for now we are just using
 commands.
 
-* `/ping` - Mozgus replies with a "Pong!"
+* `/ping` - Mozgus replies with a "Pong!" (mostly for debugging and
+testing)
+*  `/roll` - Roll for a skill. (currently not operational)

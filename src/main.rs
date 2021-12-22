@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler},
@@ -9,11 +12,28 @@ use serenity::{
     }
 };
 use std::fs::File;
-use std::io::{Read, Write, Error};
+use std::io::{Read, Write, Error, Split};
+use std::sync::Mutex;
+use rand::prelude::*;
+
+
+struct Row (Vec<String>);
+struct Table (Vec<Row>);
+impl Table {
+    fn parse(csv: &str) -> Table {
+        let mut table: Vec<Row> = Vec::new();
+        let rows: Vec<String> = csv.to_string().split("\n").collect::<Vec<String>>();
+        for r in rows {
+            let row: Row = Row(r.split(",").collect::<Vec<String>>());
+            table.push(row);
+        }
+        Table(table)
+    }
+}
 
 
 #[group]
-#[commands(ping)]
+#[commands(ping, roll)]
 struct General;
 
 struct Handler;
@@ -52,15 +72,18 @@ fn load_cfg() -> Result<Cfg, Error> {
 }
 
 
+lazy_static! {
+    static ref CFG: Cfg = load_cfg().unwrap();
+}
+
+
 #[tokio::main]
 async fn main() {
-    let c = load_cfg().expect("Error loading config file.");
-
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("/"))
         .group(&GENERAL_GROUP);
 
-    let mut client = Client::builder(c.token)
+    let mut client = Client::builder(&CFG.token)
         .event_handler(Handler)
         .framework(framework)
         .await
@@ -74,7 +97,30 @@ async fn main() {
 
 #[command]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+    // syntax: /ping
     msg.reply(&ctx, "Pong!").await?;
+
+    Ok(())
+}
+
+#[command]
+async fn roll(ctx: &Context, msg: &Message) -> CommandResult {
+    // syntax: /roll [SKILL]
+    let r = rand::thread_rng().gen::<u32>() % 100;
+    let adjust = match &CFG.adjust_rolls {
+        true => 5,
+        false => 0
+    } as i32;
+    let total = (r as i32) - adjust;
+    let usn = match msg.author_nick(&ctx).await {
+        Some(nick) => nick,
+        _ => msg.author.name.to_string()
+    }.to_string();
+    let skill = *(&msg.content.split(" ").collect::<Vec<&str>>()[1]);
+
+    let mtext = format!("{} rolled for {} ({} - {} = {}) {}", usn, skill, r, adjust, total, "SUCCESS");
+
+    msg.reply(&ctx, mtext).await?;
 
     Ok(())
 }

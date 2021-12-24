@@ -1,4 +1,4 @@
- #[macro_use]
+#[macro_use]
 extern crate lazy_static;
 
 use serenity::{
@@ -9,6 +9,7 @@ use serenity::{
 mod config;
 mod command;
 mod csreader;
+mod cache;
 
 
 #[tokio::main]

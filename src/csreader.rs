@@ -17,7 +17,11 @@ impl Table {
         Table(t)
     }
 
-    pub fn get_cell(cell_code: [char; 2]) -> String {unimplemented!()}
+    pub fn get_cell(&self, cell_code: &str) -> String {
+        let letter = (cell_code[0] - 65) as u8;
+        let digit = u8::from_str_radix(cell_code[1..], 10).unwrap();
+        self[digit][letter]
+    }
 }
 
 pub fn get_sheet(cname: &str) -> Result<String, Error> {

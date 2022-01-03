@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
@@ -8,6 +9,7 @@ use serenity::{
     }
 };
 use rand::prelude::*;
+use crate::cache::CACHE;
 
 
 #[group]
@@ -40,9 +42,23 @@ async fn roll(ctx: &Context, msg: &Message) -> CommandResult {
         Some(nick) => nick,
         _ => msg.author.name.to_string()
     }.to_string();
-    let skill = *(&msg.content.split(" ").collect::<Vec<&str>>()[1]);
+    let skill = &msg.content.split_whitespace().collect::<Vec<&str>>()[1..].join(" ");
+    let mut success = false;
 
-    let mtext = format!("{} rolled for {} ({} - {} = {}) {}", usn, skill, r, adjust, total, "SUCCESS");
+    let value = Arc::clone(&CACHE).lock().unwrap().get_skill(usn.as_str(), skill.as_str());
+    if value == None {
+        msg.reply(&ctx, format!("Can't find the {} skill for {}", skill, usn)).await?;
+        return Ok(());
+    }
+    success = total <= value.unwrap();
+
+    let goal = if success {
+        "SUCCESS"
+    } else {
+        "FAIL"
+    };
+
+    let mtext = format!("{} rolled for {} ({} - {} = {}) {}", usn, skill, r, adjust, total, goal);
 
     msg.reply(&ctx, mtext).await?;
 

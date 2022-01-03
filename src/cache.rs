@@ -1,78 +1,194 @@
 use std::collections::HashMap;
+use crate::csreader::get_sheet;
+use std::sync::{Arc, Mutex};
 
-
-pub struct Character {
-    // vitals
-    name: String,
-    max_hp: u8,
-    cur_hp: u8,
-    max_san: u8,
-    cur_san: u8,
-    luck: u8,
-    max_mp: u8,
-    cur_mp: u8,
-
-    // stats
-    str: u8,
-    dex: u8,
-    int: u8,
-    con: u8,
-    app: u8,
-    pow: u8,
-    siz: u8,
-    edu: u8,
-
-    // inventory
-    weapons: Vec<String>,
-
-    skills: HashMap<String, u8>
+pub struct Cache {
+    sheets: Vec<String>
 }
 
-impl Character {
-    // TODO *ERROR HANDLING!!!*
-    // perhaps find a less tedious way to do this; possibly a serialization library or database kinda thing
-    pub fn build_character(table: crate::csreader::Table) -> Character {
-        let name = table.get_cell("B1");
-        let max_hp = u8::from_str_radix(table.get_cell("B9").as_str(), 10).unwrap();
-        let cur_hp = u8::from_str_radix(table.get_cell("B10").as_str(), 10).unwrap();
-        let max_san = u8::from_str_radix(table.get_cell("B13").as_str(), 10).unwrap();
-        let cur_san = u8::from_str_radix(table.get_cell("B14").as_str(), 10).unwrap();
-        let luck = u8::from_str_radix(table.get_cell("B16").as_str(), 10).unwrap();
-        let max_mp = u8::from_str_radix(table.get_cell("B18").as_str(), 10).unwrap();
-        let cur_mp = u8::from_str_radix(table.get_cell("B19").as_str(), 10).unwrap();
-
-        let str = u8::from_str_radix(table.get_cell("D1").as_str(), 10).unwrap();
-        let dex = u8::from_str_radix(table.get_cell("D5").as_str(), 10).unwrap();
-        let int = u8::from_str_radix(table.get_cell("D9").as_str(), 10).unwrap();
-        let con = u8::from_str_radix(table.get_cell("D13").as_str(), 10).unwrap();
-        let app = u8::from_str_radix(table.get_cell("D17").as_str(), 10).unwrap();
-        let pow = u8::from_str_radix(table.get_cell("D21").as_str(), 10).unwrap();
-        let siz = u8::from_str_radix(table.get_cell("D25").as_str(), 10).unwrap();
-        let edu = u8::from_str_radix(table.get_cell("D29").as_str(), 10).unwrap();
-
-        let weapons = Vec::new() as Vec<String>;
-
-        let mut skills = HashMap::new() as HashMap<String, u8>;
-        let digits = (23..=69).collect() as Vec<u8>;
-        for index in digits {
-            let skillname = table.get_cell(format!("E{}", index).as_str());
-            let skilluser = table.get_cell(format!("G{}", index).as_str());
-            let skillvalue = if skilluser.is_empty() {
-                table.get_cell(format!("F{}", index).as_str())
-            } else {
-                skilluser
-            };
-            skills.insert(
-                skillname,
-                u8::from_str_radix(skillvalue.as_str(), 10).unwrap()
-            );
-        }
-
-        Character {
-            name, max_hp, cur_hp, max_san, cur_san, luck, max_mp, cur_mp,
-            str, dex, int, con, app, pow, siz, edu,
-            weapons,
-            skills
+impl Cache {
+    pub fn new() -> Cache {
+        Cache {
+            sheets: Vec::new() as Vec<String>
         }
     }
+
+    pub fn get_sheet(&self, name: &str) -> Option<Vec<Vec<String>>> {
+        for (index, s) in self.sheets.iter().enumerate() {
+            let sheet = self.gen_table(index);
+            let sname = &sheet[0][1];
+            if name == sname {
+                return Some(sheet);
+            }
+        }
+        None
+    }
+
+    pub fn gen_table(&self, index: usize) -> Vec<Vec<String>> {
+        let sheet = &self.sheets[index];
+        let mut table = Vec::new() as Vec<Vec<String>>;
+
+        for r in sheet.split("\n") {
+            let mut row = Vec::new() as Vec<String>;
+            for col in r.split(",") {
+                row.push(col.to_string());
+            }
+            table.push(row);
+        }
+
+        table
+    }
+
+    pub fn table_from_data(data: &str) -> Vec<Vec<String>> {
+        let sheet = data;
+        let mut table = Vec::new() as Vec<Vec<String>>;
+
+        for r in sheet.split("\n") {
+            let mut row = Vec::new() as Vec<String>;
+            for col in r.split(",") {
+                row.push(col.to_string());
+            }
+            table.push(row);
+        }
+
+        table
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        return if let Some(x) = self.get_sheet(name) {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn add(&mut self, data: &str) -> Vec<Vec<String>> {
+        let sheet = Cache::table_from_data(data);
+        let check = self.contains(&sheet[0][1]);
+        if !check {
+            self.sheets.push(data.to_string());
+            return sheet;
+        } else {
+            return self.get_sheet(&sheet[0][1]).unwrap();
+        }
+    }
+
+    pub fn get_stat(&mut self, name: &str, stat: &str) -> Option<i32> {
+        let index: (usize, usize) = match stat {
+            "hp" => (9, 1),
+            "sanity" => (13, 1),
+            "luck" => (15, 1),
+            "mp" => (18, 1),
+            "str" => (0, 3),
+            "dex" => (4, 3),
+            "int" | "idea" => (8, 3),
+            "con" => (13, 3),
+            "app" => (16, 3),
+            "pow" => (20, 3),
+            "siz" => (24, 3),
+            "edu" => (28, 3),
+            _ => (0xff, 0xff)
+        };
+        let sheet = self.get_sheet(name);
+        if sheet == None {
+            let data = get_sheet(name).unwrap();
+            let s = Cache::table_from_data(data.as_str());
+            self.add(&data);
+            let sretval = &s[index.0][index.1].trim();
+            let retval = sretval.parse::<i32>().unwrap();
+            return Some(retval)
+        } else {
+            let s = sheet.unwrap();
+            let sretval = &s[index.0][index.1].trim();
+            let retval = sretval.parse::<i32>().unwrap();
+            return Some(retval);
+        }
+    }
+
+    pub fn get_skill(&mut self, name: &str, skill: &str) -> Option<i32> {
+        let offset: usize = match skill {
+            "Accounting" => 0,
+            "Anthropology" => 1,
+            "Appraise" => 2,
+            "Archaeology" => 3,
+            "Art" | "Craft" => 4,
+            "Charm" => 5,
+            "Climb" => 6,
+            "Computer Use" => 7,
+            "Credit Rating" => 8,
+            "Cthulhu Mythos" => 9,
+            "Disguise" => 10,
+            "Dodge" => 11,
+            "Drive Auto" => 12,
+            "Elec Repair" => 13,
+            "Electronics" => 14,
+            "Fast Talk" => 15,
+            "Brawl" => 16,
+            "Handgun" => 17,
+            "Rifle" | "Shotgun" => 18,
+            "First Aid" => 19,
+            "History" => 20,
+            "Intimidate" => 21,
+            "Jump" => 22,
+            "Language Other" => 23,
+            "Language Own" => 24,
+            "Law" => 25,
+            "Library Use" => 26,
+            "Listen" => 27,
+            "Locksmith" => 28,
+            "Mech Repair" => 29,
+            "Medicine" => 30,
+            "NaturalWorld" => 31,
+            "Navigate" => 32,
+            "Occult" => 33,
+            "Operate Heavy Machine" => 34,
+            "Persuade" => 35,
+            "Pilot" => 36,
+            "Psychology" => 37,
+            "Psychoanalysis" => 38,
+            "Science" => 39,
+            "Sleight Of Hand" => 40,
+            "Spot Hidden" => 41,
+            "Stealth" => 42,
+            "Survival" => 43,
+            "Swim" => 44,
+            "Throw" => 45,
+            "Track" => 46,
+            _ => 0xff
+        };
+        let origin = 22;
+        let index = origin + offset;
+        if index >= 69 {
+            return None;
+        }
+
+        let sheet = self.get_sheet(name);
+        if sheet.is_none() {
+            let data = get_sheet(name).unwrap();
+            self.add(&data);
+            let s = Cache::table_from_data(data.as_str());
+            let base = s[index][5].trim();
+            let modified = s[index][6].trim();
+            let k = if modified.is_empty() {
+                base
+            } else {
+                modified
+            };
+            return Some(k.parse::<i32>().unwrap());
+        } else {
+            let s = sheet.unwrap();
+            let base = s[index][5].trim();
+            let modified = s[index][6].trim();
+            let k = if modified.is_empty() {
+                base
+            } else {
+                modified
+            };
+            return Some(k.parse::<i32>().unwrap());
+        }
+    }
+}
+
+lazy_static! {
+    pub static ref CACHE: Arc<Mutex<Cache>> = Arc::new(Mutex::new(Cache::new()));
 }

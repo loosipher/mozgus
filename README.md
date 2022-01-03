@@ -26,3 +26,4 @@ commands.
 * `/ping` - Mozgus replies with a "Pong!" (mostly for debugging and
 testing)
 * `/roll` - Roll for a skill.
+* `/stat` - Display specified stat.

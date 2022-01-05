@@ -25,5 +25,12 @@ commands.
 
 * `/ping` - Mozgus replies with a "Pong!" (mostly for debugging and
 testing)
-* `/roll` - Roll for a skill.
+* `/roll` - Roll for a skill. Skills have three difficulties. The default
+uses the regular skill, no modification necessary. The next difficulty
+is hard. It divides the skill by two: `/roll Drive Auto hard`. The final
+is impossible. This divides by three: `/roll Brawl impossible`.
 * `/stat` - Display specified stat.
+
+<sub>Though the layout of the character sheet document may be deduced from
+the code, I intend to link to a blank copy of the spreadsheet I used for
+reference.</sub>

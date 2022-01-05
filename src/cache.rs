@@ -105,7 +105,16 @@ impl Cache {
         }
     }
 
-    pub fn get_skill(&mut self, name: &str, skill: &str) -> Option<i32> {
+    pub fn get_skill(&mut self, name: &str, s: &str) -> Option<i32> {
+        let mut skill = s;
+        let mut divide = 1;
+        if skill.ends_with(" hard") {
+            divide = 2;
+            skill = &skill.replace(" hard", "");
+        } else if skill.ends_with(" impossible") {
+            divide = 3;
+            skill = &skill.replace(" impossible", "");
+        }
         let offset: usize = match skill {
             "Accounting" => 0,
             "Anthropology" => 1,
@@ -163,6 +172,7 @@ impl Cache {
         }
 
         let sheet = self.get_sheet(name);
+        let mut value = 0;
         if sheet.is_none() {
             let data = get_sheet(name).unwrap();
             self.add(&data);
@@ -174,7 +184,7 @@ impl Cache {
             } else {
                 modified
             };
-            return Some(k.parse::<i32>().unwrap());
+            value = k.parse::<i32>().unwrap();
         } else {
             let s = sheet.unwrap();
             let base = s[index][5].trim();
@@ -184,8 +194,10 @@ impl Cache {
             } else {
                 modified
             };
-            return Some(k.parse::<i32>().unwrap());
+            value = k.parse::<i32>().unwrap();
         }
+
+        Some(value/divide)
     }
 }
 

@@ -106,16 +106,14 @@ impl Cache {
     }
 
     pub fn get_skill(&mut self, name: &str, s: &str) -> Option<i32> {
-        let mut skill = s;
         let mut divide = 1;
-        if skill.ends_with(" hard") {
+        if s.ends_with(" hard") {
             divide = 2;
-            skill = &skill.replace(" hard", "");
-        } else if skill.ends_with(" impossible") {
+        } else if s.ends_with(" impossible") {
             divide = 3;
-            skill = &skill.replace(" impossible", "");
         }
-        let offset: usize = match skill {
+        let skill = s.replace(" hard", "").replace(" impossible", "");
+        let offset: usize = match skill.as_str() {
             "Accounting" => 0,
             "Anthropology" => 1,
             "Appraise" => 2,
